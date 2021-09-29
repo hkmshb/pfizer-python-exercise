@@ -5,6 +5,54 @@ from base import (
 )
 
 
+class TestAttrDict:
+    def test_init(self):
+        assert AttrDict() == {}
+        assert AttrDict({}) == {}
+        assert AttrDict(foo='bar') == {'foo': 'bar'}
+        assert AttrDict({'foo': 'bar'}) == {'foo': 'bar'}
+
+    def test_access_value_using_attribute(self):
+        obj = AttrDict(foo='bar')
+        assert 'foo' in obj
+        assert obj.foo == 'bar'
+
+    def test_access_value_by_indexing(self):
+        obj = AttrDict(foo='bar')
+        assert obj['foo'] == 'bar'
+
+    def test_value_assignment_using_attribute(self):
+        obj = AttrDict()
+        assert 'foo' not in obj
+
+        obj.foo = 'bar'
+        assert hasattr(obj, 'foo') == True
+        assert obj.foo == 'bar'
+
+    def test_value_assignment_by_indexing(self):
+        obj = AttrDict()
+        assert obj.get('foo') is None
+
+        obj['foo'] = 'bar'
+        assert obj.foo == 'bar'
+
+    def test_nested_value_access_using_attribute(self):
+        obj = AttrDict({'foo': {'bar': 'yes'}})
+        assert obj['foo']['bar'] == 'yes'
+        assert obj.foo.bar == 'yes'
+
+    def test_nested_value_assignment_using_attribute(self):
+        obj = AttrDict({'foo': {'bar': 'yes'}})
+        obj.foo.bar = 'no'
+
+        assert obj['foo']['bar'] == 'no'
+        assert obj.foo.bar == 'no'
+
+    def test_array_values_converted_on_access(self):
+        obj = AttrDict({'rows': [{'foo': 'bar'}, 77]})
+        assert isinstance(obj.rows[0], AttrDict) == True
+        assert isinstance(obj.rows[1], int) == True
+
 class TestBatchValidator:
     validator = BatchValidator()
 

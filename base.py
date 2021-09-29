@@ -1,7 +1,27 @@
 import csv
+import json
+import logging
 import re
+import uuid
+
+from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import unquote
+
+import boto3
+import botocore
+import requests
+
+
+logger = logging.getLogger(__file__)
+cred = json.load(Path('./bin/config.json').open('r')).get('cred')
+s3 = boto3.client(
+    's3',
+    aws_access_key_id=cred['accessKeyId'],
+    aws_secret_access_key=cred['secretAccessKey']
+)
 
 
 # Exceptions
@@ -22,8 +42,14 @@ class AttrDict(dict):
 
     def __getattr__(self, name: str) -> Any:
         value = self.get(name)
-        if isinstance(value, dict) and not isinstance(value, AttrDict):
+        is_dict = lambda x: isinstance(x, dict) and not isinstance(x, AttrDict)
+
+        if is_dict(value):
             value = self[name] = AttrDict(value)
+        elif isinstance(value, (list, tuple)):
+            value = [AttrDict(item) if is_dict(item) else item for item in value]
+            self[name] = value
+
         return value
 
     def __setattr__(self, name: str, value: Any) -> None:
@@ -37,6 +63,67 @@ class AttrDictReader(csv.DictReader):
     def __next__(self) -> AttrDict:
         row = super().__next__()
         return AttrDict(row)
+
+
+
+class S3ObjInfo:
+    """Provides properties and methods for working with objects on S3.
+    """
+    def __init__(self, bucket: str, key: str):
+        self.bucket = bucket
+        self.key = key
+        self.__local_filepath = None
+        self.__content_type = None
+
+    @property
+    def content_type(self):
+        return self.__content_type
+
+    @property
+    def local_filepath(self):
+        return self.__local_filepath
+
+    @property
+    def local_exists(self):
+        return (self.__local_filepath is not None) and self.__local_filepath.exists()
+
+    def _generate_local_name(self):
+        """Returns a randomly generated name that the S3 object can go by locally.
+        """
+        local_key = unquote(self.key).replace('/', '')
+        return f'{uuid.uuid4()}_{local_key}'
+
+    def download(self, dest_dir: Path):
+        """Downloads S3 object.
+
+        :param dest_path: destination path for downloaded object.
+        :type dest_path: str
+        :return: Path to the file representing downloaded s3 object.
+        :rtype: str
+        """
+        logger.info(f'Downloading S3 object: {self.key} ...')
+        self.__local_filepath = dest_dir / self._generate_local_name()
+
+        try:
+            response = s3.get_object(Bucket=self.bucket, Key=self.key)
+            self.__content_type = response['ContentType']
+
+            logger.debug('Saving s3 object locally...')
+            data = response['Body'].read()
+            with self.local_filepath.open('wb') as f:
+                f.write(data)
+                f.flush()
+        except Exception as ex:
+            logger.error(f'Object download failed. {ex}')
+
+    def upload(self):
+        """Upload local file to S3.
+        """
+        if not self.local_exists:
+            return
+
+        with self.local_filepath.open('rb') as f:
+            s3.put_object(Bucket=self.bucket, Key=self.key, Body=f)
 
 
 # Validators
