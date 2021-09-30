@@ -4,12 +4,10 @@ import json
 import logging
 import mimetypes
 import sqlite3
-
 from pathlib import Path
 from typing import Any, Iterator, List
 
 from base import AttrDict, AttrDictReader, RowValidator, S3ObjInfo
-
 
 logging.basicConfig(format='%(levelname)s - %(module)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__file__)
@@ -30,20 +28,17 @@ class DB:
         self.conn = conn
 
     def count(self):
-        """Returns the total number of records within the 'uploads' table.
-        """
+        """Returns the total number of records within the 'uploads' table."""
         cur = self.conn.execute('SELECT COUNT(*) FROM uploads')
         return cur.fetchone()[0]
 
     def fetchall(self):
-        """Returns all rows within the 'uploads' table.
-        """
+        """Returns all rows within the 'uploads' table."""
         cur = self.conn.execute('SELECT * FROM uploads')
         return cur.fetchall()
 
     def fetch_by_batch(self, batch):
-        """Returns all rows with batch matching specified value.
-        """
+        """Returns all rows with batch matching specified value."""
         cur = self.conn.execute('SELECT * FROM uploads WHERE batch = ?', (batch,))
         return cur.fetchall()
 
@@ -89,13 +84,13 @@ class DB:
 
 
 def cleanup_resources(infos: List[S3ObjInfo]):
-    count  = 0
+    count = 0
     logger.info('Cleaning up downloaded resources ...')
     for info in [i for i in infos or [] if i.local_exists]:
         try:
             info.local_filepath.unlink()
             count += 1
-        except:
+        except Exception:
             logger.debug(f'Unable to delete: {info.local_filepath}')
 
     logger.info(f'{count}/{len(infos)} deleted.')
@@ -106,13 +101,13 @@ def process_records(filepath: Path, db: DB, batch_size: int = 50):
         with filepath.open('r') as fp:
             reader = AttrDictReader(fp)
 
-            rows = []
+            rows: List[AttrDict] = []
             for row in reader:
-                if not row_validator.is_valid(row):
+                if not row_validator.is_valid(row):  # type: ignore
                     logger.debug(f'Invalid row encountered. Error: {row_validator.err}.')
                     continue
 
-                rows.append(row)
+                rows.append(row)  # type: ignore
                 if len(rows) == batch_size:
                     yield rows
                     rows = []
@@ -184,7 +179,7 @@ def handler(event: dict, context: Any):
 
     try:
         cleanup_resources(infos + skipped + [db_info])
-    except:
+    except Exception:
         pass
 
 

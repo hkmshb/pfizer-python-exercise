@@ -1,7 +1,14 @@
 import pytest
+
 from base import (
-    AttrDict, BatchValidator, BoolValidator, DateValidator, FuncValidator, NotEmptyValidator,
-    ValidationError, RowValidator
+    AttrDict,
+    BatchValidator,
+    BoolValidator,
+    DateValidator,
+    FuncValidator,
+    NotEmptyValidator,
+    RowValidator,
+    ValidationError,
 )
 
 
@@ -26,7 +33,7 @@ class TestAttrDict:
         assert 'foo' not in obj
 
         obj.foo = 'bar'
-        assert hasattr(obj, 'foo') == True
+        assert hasattr(obj, 'foo') is True
         assert obj.foo == 'bar'
 
     def test_value_assignment_by_indexing(self):
@@ -50,8 +57,9 @@ class TestAttrDict:
 
     def test_array_values_converted_on_access(self):
         obj = AttrDict({'rows': [{'foo': 'bar'}, 77]})
-        assert isinstance(obj.rows[0], AttrDict) == True
-        assert isinstance(obj.rows[1], int) == True
+        assert isinstance(obj.rows[0], AttrDict) is True
+        assert isinstance(obj.rows[1], int) is True
+
 
 class TestBatchValidator:
     validator = BatchValidator()
@@ -75,9 +83,9 @@ class TestBatchValidator:
         expected_length = 20
         assert self.validator.length == expected_length
         for batch_value in [
-            '9kzuKXkRCjkvdgvgpLsC', # starts with digit
-            'dkzuKXkRCjkvdgvgpLs7', # ends with digit
-            'dkzuKXkRC7kvdgvgpLsC', # has embedded digit
+            '9kzuKXkRCjkvdgvgpLsC',  # starts with digit
+            'dkzuKXkRCjkvdgvgpLs7',  # ends with digit
+            'dkzuKXkRC7kvdgvgpLsC',  # has embedded digit
         ]:
             assert len(batch_value) == expected_length
             pytest.raises(ValidationError, self.validator, batch_value)
@@ -87,7 +95,11 @@ class TestBatchValidator:
         expected_length = 20
         assert self.validator.length == expected_length
 
-        for batch_value in ['fUBImUCTzQUsbRVVNSoM', 'ASikVvAGnNIqCwFJKres', 'TJZbvyCgkNBDLrJeiaOX']:
+        for batch_value in [
+            'fUBImUCTzQUsbRVVNSoM',
+            'ASikVvAGnNIqCwFJKres',
+            'TJZbvyCgkNBDLrJeiaOX',
+        ]:
             assert len(batch_value) == expected_length
             try:
                 self.validator(batch_value)
@@ -145,11 +157,11 @@ class TestDateValidator:
 
         validator = DateValidator(format='%Y-%m-%dT%H:%M:S')
         for value in [
-            '2020-11-11T24:58:40', # invalid hour
-            '2020-11-11T22:68:40', # invalid minute
-            '2020-11-11T22:58:90', # invalid second
-            '2020-13-11T22:58:40', # invalid month
-            '2020-11-13T22:58:40', # invalid day
+            '2020-11-11T24:58:40',  # invalid hour
+            '2020-11-11T22:68:40',  # invalid minute
+            '2020-11-11T22:58:90',  # invalid second
+            '2020-13-11T22:58:40',  # invalid month
+            '2020-11-13T22:58:40',  # invalid day
         ]:
             pytest.raises(ValidationError, validator, value)
 
@@ -162,12 +174,8 @@ class TestDateValidator:
             except ValueError:
                 pytest.fail('Unexpected error')
 
-
         validator = DateValidator(format='%Y-%m-%dT%H:%M:%S')
-        for value in [
-            '2020-11-11T23:58:40',
-            '1979-11-11T22:58:40'
-        ]:
+        for value in ['2020-11-11T23:58:40', '1979-11-11T22:58:40']:
             try:
                 validator(value)
             except ValueError:
@@ -221,69 +229,100 @@ class TestFuncValidator:
 class TestRowValidator:
     validator = RowValidator()
 
-    @pytest.mark.parametrize('data', [
-        {
-            # missing pass
-            'batch': 'oIcACSLYuEWKXVHNeXdK', 'start': '2003-09-12T03:32:48',
-            'end': '2019-05-29T11:51:43', 'records': '100', 'message': 'one'
-        },
-        {
-            # missing end
-            'batch': 'oIcACSLYuEWKXVHNeXdK', 'start': '2003-09-12T03:32:48',
-            'records': '100', 'pass': 'true', 'message': 'two'
-        },
-        {
-            # pass is invalid: expects True | False
-            'batch': 'oIcACSLYuEWKXVHNeXdK', 'start': '2003-09-12T03:32:48',
-            'end': '2019-05-29T11:51:43', 'records': '100', 'pass': None,
-            'message': 'three'
-        },
-        {
-            # missing message
-            'batch': 'oIcACSLYuEWKXVHNeXdK', 'start': '2003-09-12T03:32:48',
-            'end': '2019-05-29T11:51:43', 'records': '100', 'pass': 'true',
-        },
-    ])
+    @pytest.mark.parametrize(
+        'data',
+        [
+            {
+                # missing pass
+                'batch': 'oIcACSLYuEWKXVHNeXdK',
+                'start': '2003-09-12T03:32:48',
+                'end': '2019-05-29T11:51:43',
+                'records': '100',
+                'message': 'one',
+            },
+            {
+                # missing end
+                'batch': 'oIcACSLYuEWKXVHNeXdK',
+                'start': '2003-09-12T03:32:48',
+                'records': '100',
+                'pass': 'true',
+                'message': 'two',
+            },
+            {
+                # pass is invalid: expects True | False
+                'batch': 'oIcACSLYuEWKXVHNeXdK',
+                'start': '2003-09-12T03:32:48',
+                'end': '2019-05-29T11:51:43',
+                'records': '100',
+                'pass': None,
+                'message': 'three',
+            },
+            {
+                # missing message
+                'batch': 'oIcACSLYuEWKXVHNeXdK',
+                'start': '2003-09-12T03:32:48',
+                'end': '2019-05-29T11:51:43',
+                'records': '100',
+                'pass': 'true',
+            },
+        ],
+    )
     def test_fails_for__missing_column__missing_data(self, data):
         row = AttrDict(data)
         pytest.raises(ValidationError, self.validator, row)
-        assert self.validator.is_valid(row) == False
+        assert self.validator.is_valid(row) is False
 
-
-    @pytest.mark.parametrize('data', [
-        {
-            # invalid batch length
-            'batch': 'oIcACSLYuEWKXVHNeXdKZYZ', 'start': '2003-09-12T03:32:48',
-            'end': '2019-05-29T11:51:43', 'records': '100', 'pass': 'true',
-            'message': 'the big brown'
-        },
-        {
-            # invalid start date
-            'batch': 'oIcACSLYuEWKXVHNeXdK', 'start': '2003-19-12T03:32:48',
-            'end': '2019-05-29T11:51:43', 'records': '100', 'pass': 'true',
-            'message': 'the big black'
-        },
-        {
-            # invalid records value
-            'batch': 'oIcACSLYuEWKXVHNeXdK', 'start': '2003-09-12T03:32:48',
-            'end': '2019-05-29T11:51:43', 'records': '10.6', 'pass': 'false',
-            'message': 'the big blue'
-        }
-    ])
+    @pytest.mark.parametrize(
+        'data',
+        [
+            {
+                # invalid batch length
+                'batch': 'oIcACSLYuEWKXVHNeXdKZYZ',
+                'start': '2003-09-12T03:32:48',
+                'end': '2019-05-29T11:51:43',
+                'records': '100',
+                'pass': 'true',
+                'message': 'the big brown',
+            },
+            {
+                # invalid start date
+                'batch': 'oIcACSLYuEWKXVHNeXdK',
+                'start': '2003-19-12T03:32:48',
+                'end': '2019-05-29T11:51:43',
+                'records': '100',
+                'pass': 'true',
+                'message': 'the big black',
+            },
+            {
+                # invalid records value
+                'batch': 'oIcACSLYuEWKXVHNeXdK',
+                'start': '2003-09-12T03:32:48',
+                'end': '2019-05-29T11:51:43',
+                'records': '10.6',
+                'pass': 'false',
+                'message': 'the big blue',
+            },
+        ],
+    )
     def test_fails_for__invalid_column_values(self, data):
         row = AttrDict(data)
         pytest.raises(ValidationError, self.validator, row)
-        assert self.validator.is_valid(row) == False
+        assert self.validator.is_valid(row) is False
 
     def test_passes_for_valid_row_data(self):
-        row = AttrDict({
-            'batch': 'oIcACSLYuEWKXVHNeXdK', 'start': '2003-09-12T03:32:48',
-            'end': '2019-05-29T11:51:43', 'records': '100', 'pass': 'true',
-            'message': 'the big brown fox'
-        })
+        row = AttrDict(
+            {
+                'batch': 'oIcACSLYuEWKXVHNeXdK',
+                'start': '2003-09-12T03:32:48',
+                'end': '2019-05-29T11:51:43',
+                'records': '100',
+                'pass': 'true',
+                'message': 'the big brown fox',
+            }
+        )
 
         try:
             self.validator(row)
-            assert self.validator.is_valid(row) == True
+            assert self.validator.is_valid(row) is True
         except ValidationError:
             pytest.fail('Unexpected error')

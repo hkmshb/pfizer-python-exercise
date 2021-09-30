@@ -1,6 +1,7 @@
-import pytest
 import sqlite3
 from pathlib import Path
+
+import pytest
 
 from handler import process_records, DB
 
@@ -16,12 +17,16 @@ def db():
 
 
 class TestUploadProcessing:
-
-    @pytest.mark.parametrize('upload, last_batch', [
-        (Path('./fixtures/file1.csv'), 'pMQaQdvxVbimtnsHRAds'),
-        (Path('./fixtures/file2.csv'), 'tmoThtJPZsossGWXjUdz'),
-    ])
-    def test_process_records_skips_bad_records_to_process_other_records(self, db, upload, last_batch):
+    @pytest.mark.parametrize(
+        'upload, last_batch',
+        [
+            (Path('./fixtures/file1.csv'), 'pMQaQdvxVbimtnsHRAds'),
+            (Path('./fixtures/file2.csv'), 'tmoThtJPZsossGWXjUdz'),
+        ],
+    )
+    def test_process_records_skips_bad_records_to_process_other_records(
+        self, db, upload, last_batch
+    ):
         assert db.count() == 0
         assert upload.exists()
 
@@ -52,8 +57,8 @@ class TestUploadProcessing:
 
     def test_process_records_skips_bad_file_to_process_other_files(self, db):
         uploads = (
-            Path('./fixtures/file3.csv'),   # bad file, all records skipped
-            Path('./fixtures/file1.csv'),   # valid file with invalid records
+            Path('./fixtures/file3.csv'),  # bad file, all records skipped
+            Path('./fixtures/file1.csv'),  # valid file with invalid records
         )
 
         assert db.count() == 0
@@ -68,8 +73,8 @@ class TestUploadProcessing:
 
     def test_process_records_skips_invalid_files_to_process_other_files(self, db):
         uploads = (
-            Path('./fixtures/image.png'),   # bad file, all records skipped
-            Path('./fixtures/file1.csv'),   # valid file with invalid records
+            Path('./fixtures/image.png'),  # bad file, all records skipped
+            Path('./fixtures/file1.csv'),  # valid file with invalid records
         )
 
         assert db.count() == 0

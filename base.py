@@ -4,46 +4,43 @@ import logging
 import re
 import uuid
 
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 from urllib.parse import unquote
 
 import boto3
 
-
 logger = logging.getLogger(__file__)
 cred = json.load(Path('./bin/config.json').open('r')).get('cred')
 s3 = boto3.client(
-    's3',
-    aws_access_key_id=cred['accessKeyId'],
-    aws_secret_access_key=cred['secretAccessKey']
+    's3', aws_access_key_id=cred['accessKeyId'], aws_secret_access_key=cred['secretAccessKey']
 )
 
 
 # Exceptions
 # ==============================================================
 
+
 class ValidationError(Exception):
-    """Error raised for invalid data.
-    """
+    """Error raised for invalid data."""
+
     pass
 
 
 # Types
 # ==============================================================
 
+
 class AttrDict(dict):
-    """Represents a dict that allows attribute-style access.
-    """
+    """Represents a dict that allows attribute-style access."""
 
     def __getattr__(self, name: str) -> Any:
         value = self.get(name)
-        is_dict = lambda x: isinstance(x, dict) and not isinstance(x, AttrDict)
+        is_dict = lambda x: isinstance(x, dict) and not isinstance(x, AttrDict)  # noqa
 
         if is_dict(value):
-            value = self[name] = AttrDict(value)
+            value = self[name] = AttrDict(value)  # type: ignore
         elif isinstance(value, (list, tuple)):
             value = [AttrDict(item) if is_dict(item) else item for item in value]
             self[name] = value
@@ -55,18 +52,16 @@ class AttrDict(dict):
 
 
 class AttrDictReader(csv.DictReader):
-    """A CSV reader that returns an AttrDict for each row.
-    """
+    """A CSV reader that returns an AttrDict for each row."""
 
     def __next__(self) -> AttrDict:
         row = super().__next__()
         return AttrDict(row)
 
 
-
 class S3ObjInfo:
-    """Provides properties and methods for working with objects on S3.
-    """
+    """Provides properties and methods for working with objects on S3."""
+
     def __init__(self, bucket: str, key: str):
         self.bucket = bucket
         self.key = key
@@ -86,8 +81,7 @@ class S3ObjInfo:
         return (self.__local_filepath is not None) and self.__local_filepath.exists()
 
     def _generate_local_name(self):
-        """Returns a randomly generated name that the S3 object can go by locally.
-        """
+        """Returns a randomly generated name that the S3 object can go by locally."""
         local_key = unquote(self.key).replace('/', '')
         return f'{uuid.uuid4()}_{local_key}'
 
@@ -115,8 +109,7 @@ class S3ObjInfo:
             logger.error(f'Object download failed. {ex}')
 
     def upload(self):
-        """Upload local file to S3.
-        """
+        """Upload local file to S3."""
         if not self.local_exists:
             return
 
@@ -127,9 +120,10 @@ class S3ObjInfo:
 # Validators
 # ==============================================================
 
+
 class BatchValidator:
-    """Ensures that batch values are 20 characters long and characters only.
-    """
+    """Ensures that batch values are 20 characters long and characters only."""
+
     length: int
 
     def __init__(self, length: int = 20):
@@ -143,27 +137,28 @@ class BatchValidator:
 
 
 class BoolValidator:
-    """Validates boolean string values.
-    """
+    """Validates boolean string values."""
+
     def __call__(self, value: str):
         if (value or '').lower() not in ('false', 'true'):
             raise ValidationError(f'Invalid boolean value: {value}')
 
 
 class DateValidator:
-    def __init__(self, format: str = '%Y-%m-%d'):
-        self.format = format
+    def __init__(self, fmt: str = '%Y-%m-%d'):
+        self.format = fmt
 
     def __call__(self, value: str):
         try:
             datetime.strptime(value, self.format)
         except ValueError:
-            raise ValidationError(f'Invalid date value: {value}. Expected format: {self.format}')
+            raise ValidationError(
+                f'Invalid date value: {value}. Expected format: {self.format}'
+            )
 
 
 class FuncValidator:
-    """Validator which relegated validation to a callable.
-    """
+    """Validator which relegated validation to a callable."""
 
     def __init__(self, func: Callable, label: str = None):
         self.label = label
@@ -173,7 +168,9 @@ class FuncValidator:
         try:
             self.func(value)
         except Exception as ex:
-            raise ValidationError(f"Invalid {self.label or 'value'} provided: {value}. Error: {ex}")
+            raise ValidationError(
+                f"Invalid {self.label or 'value'} provided: {value}. Error: {ex}"
+            )
 
 
 def _notempty(value: str):
@@ -183,21 +180,23 @@ def _notempty(value: str):
 
 NotEmptyValidator = FuncValidator(_notempty)
 
-class RowValidator:
-    """Defines rules for validating csv records to ensure column data are of expected type/format.
-    """
 
-    err: ValidationError = None
+class RowValidator:
+    """Defines rules for validating csv records to ensure column data are of expected type/format."""  # noqa
+
+    err: Optional[ValidationError] = None
     datetime_validator = DateValidator('%Y-%m-%dT%H:%M:%S')
 
-    columns = AttrDict({
-        'batch': BatchValidator(),
-        'start': datetime_validator,
-        'end': datetime_validator,
-        'records': FuncValidator(int),
-        'pass': BoolValidator(),
-        'message': NotEmptyValidator,
-    })
+    columns = AttrDict(
+        {
+            'batch': BatchValidator(),
+            'start': datetime_validator,
+            'end': datetime_validator,
+            'records': FuncValidator(int),
+            'pass': BoolValidator(),
+            'message': NotEmptyValidator,
+        }
+    )
 
     def __call__(self, row: AttrDict):
         for name, validator in self.columns.items():
