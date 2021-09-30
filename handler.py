@@ -2,6 +2,7 @@
 """
 import json
 import logging
+import mimetypes
 import sqlite3
 
 from pathlib import Path
@@ -14,6 +15,7 @@ logging.basicConfig(format='%(levelname)s - %(module)s - %(message)s', level=log
 logger = logging.getLogger(__file__)
 
 DB_KEY = 'store/uploads.db3'
+MIMETYPE_CSV = 'text/csv'
 
 BASE_DIR = Path(__file__).parent
 TEMP_DIR = Path('/tmp')
@@ -27,10 +29,23 @@ class DB:
     def __init__(self, conn: sqlite3.Connection):
         self.conn = conn
 
+    def count(self):
+        """Returns the total number of records within the 'uploads' table.
+        """
+        cur = self.conn.execute('SELECT COUNT(*) FROM uploads')
+        return cur.fetchone()[0]
+
     def fetchall(self):
         """Returns all rows within the 'uploads' table.
         """
-        return self.conn.fetchall('SELECT * FROM uploads')
+        cur = self.conn.execute('SELECT * FROM uploads')
+        return cur.fetchall()
+
+    def fetch_by_batch(self, batch):
+        """Returns all rows with batch matching specified value.
+        """
+        cur = self.conn.execute('SELECT * FROM uploads WHERE batch = ?', (batch,))
+        return cur.fetchall()
 
     def insert(self, rows: List[AttrDict]):
         """Adds provided rows to the 'uploads' table.
@@ -105,6 +120,11 @@ def process_records(filepath: Path, db: DB, batch_size: int = 50):
             if rows:
                 yield rows
                 rows = []
+
+    # check that file is csv
+    file_type, _ = mimetypes.guess_type(filepath)
+    if file_type is None or file_type != MIMETYPE_CSV:
+        return
 
     # process file records and insert to database
     for rows in iterate_records():
