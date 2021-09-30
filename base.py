@@ -1,5 +1,4 @@
 import csv
-import json
 import logging
 import re
 import uuid
@@ -12,10 +11,7 @@ from urllib.parse import unquote
 import boto3
 
 logger = logging.getLogger(__file__)
-cred = json.load(Path('./bin/config.json').open('r')).get('cred')
-s3 = boto3.client(
-    's3', aws_access_key_id=cred['accessKeyId'], aws_secret_access_key=cred['secretAccessKey']
-)
+s3 = boto3.client('s3')
 
 
 # Exceptions

@@ -1,8 +1,8 @@
 """Defines handler for processing CSV file uploaded to S3 into an SQLite database.
 """
-import json
 import logging
 import mimetypes
+import os
 import sqlite3
 from pathlib import Path
 from typing import Any, Iterator, List
@@ -12,7 +12,7 @@ from base import AttrDict, AttrDictReader, RowValidator, S3ObjInfo
 logging.basicConfig(format='%(levelname)s - %(module)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__file__)
 
-DB_KEY = 'store/uploads.db3'
+DB_KEY = 'uploads.db3'
 MIMETYPE_CSV = 'text/csv'
 
 BASE_DIR = Path(__file__).parent
@@ -159,7 +159,8 @@ def handler(event: dict, context: Any):
         return {'status_code': 200, 'message': '0 csv file(s) processed.'}
 
     # retrieve or create sqlite database to be written to
-    db_info = S3ObjInfo(infos[0].bucket, DB_KEY)
+    db_bucket = os.environ.get('DB_BUCKET') or infos[0].bucket
+    db_info = S3ObjInfo(db_bucket, DB_KEY)
     db = DB.connect(db_info)
 
     # process and add csv records into database
@@ -181,9 +182,3 @@ def handler(event: dict, context: Any):
         cleanup_resources(infos + skipped + [db_info])
     except Exception:
         pass
-
-
-if __name__ == '__main__':
-    with Path('./bin/config.json').open('r') as f:
-        event = json.load(f).get('event')
-        handler(event, None)
