@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: >-
+  An Amazon S3 trigger that retrieves metadata for the object that has been
+  updated.
+Resources:
+  pfzuploads:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: handler.handler
+      Runtime: python3.7
+      CodeUri: .
+      Description: >-
+        An Amazon S3 trigger that retrieves metadata for the object that has
+        been updated.
+      MemorySize: 128
+      Timeout: 3
+      Role: 'arn:aws:iam::225534246577:role/service-role/pfz-uploads-role'
+      Events:
+        BucketEvent1:
+          Type: S3
+          Properties:
+            Bucket:
+              Ref: Bucket1
+            Events:
+              - 's3:ObjectCreated:*'
+      Environment:
+        Variables:
+          DB_BUCKET: pfz-output
+  Bucket1:
+    Type: 'AWS::S3::Bucket'
