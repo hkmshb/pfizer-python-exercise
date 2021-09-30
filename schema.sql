@@ -1,7 +1,7 @@
 -- Table: uploads
 -- stores all processed csv records
 CREATE TABLE uploads (
-    [batch]   VARCHAR(20) NOT NULL UNIQUE
+    [batch]   VARCHAR(20) NOT NULL
   , [start]   DATETIME NOT NULL
   , [end]     DATETIME NOT NULL
   , [records] INTEGER NOT NULL

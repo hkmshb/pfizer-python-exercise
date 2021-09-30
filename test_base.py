@@ -1,7 +1,7 @@
 import pytest
 from base import (
-    AttrDict, BatchValidator, BoolValidator, DateValidator, FuncValidator, ValidationError,
-    RowValidator
+    AttrDict, BatchValidator, BoolValidator, DateValidator, FuncValidator, NotEmptyValidator,
+    ValidationError, RowValidator
 )
 
 
@@ -183,7 +183,6 @@ class TestFuncValidator:
         for value in values:
             pytest.raises(ValidationError, self.int_validator, value)
 
-
     def test_int_validator__passes_for_int_string_value(self):
         values = ['0', '1', '1234', '192873']
         for value in values:
@@ -205,23 +204,45 @@ class TestFuncValidator:
             except Exception as ex:
                 pytest.fail(f'Unexpected error: {ex}')
 
+    def test_notempty_validator__fails_for__None__emptystring__whitespaces_only(self):
+        values = [None, '', '    ']
+        for value in values:
+            pytest.raises(ValidationError, NotEmptyValidator, value)
+
+    def test_notempty_validator__passes_for__nonempty_value(self):
+        values = ['one', '2', '2.3', 'dummy text']
+        for value in values:
+            try:
+                NotEmptyValidator(value)
+            except Exception as ex:
+                pytest.fail(f'Unexpected error: {ex}')
+
 
 class TestRowValidator:
     validator = RowValidator()
 
     @pytest.mark.parametrize('data', [
         {
+            # missing pass
             'batch': 'oIcACSLYuEWKXVHNeXdK', 'start': '2003-09-12T03:32:48',
-            'end': '2019-05-29T11:51:43', 'records': '100'
+            'end': '2019-05-29T11:51:43', 'records': '100', 'message': 'one'
         },
         {
+            # missing end
             'batch': 'oIcACSLYuEWKXVHNeXdK', 'start': '2003-09-12T03:32:48',
-            'records': '100', 'pass': 'true'
+            'records': '100', 'pass': 'true', 'message': 'two'
         },
         {
+            # pass is invalid: expects True | False
             'batch': 'oIcACSLYuEWKXVHNeXdK', 'start': '2003-09-12T03:32:48',
-            'end': '2019-05-29T11:51:43', 'records': '100', 'pass': None
-        }
+            'end': '2019-05-29T11:51:43', 'records': '100', 'pass': None,
+            'message': 'three'
+        },
+        {
+            # missing message
+            'batch': 'oIcACSLYuEWKXVHNeXdK', 'start': '2003-09-12T03:32:48',
+            'end': '2019-05-29T11:51:43', 'records': '100', 'pass': 'true',
+        },
     ])
     def test_fails_for__missing_column__missing_data(self, data):
         row = AttrDict(data)
@@ -233,17 +254,20 @@ class TestRowValidator:
         {
             # invalid batch length
             'batch': 'oIcACSLYuEWKXVHNeXdKZYZ', 'start': '2003-09-12T03:32:48',
-            'end': '2019-05-29T11:51:43', 'records': '100', 'pass': 'true'
+            'end': '2019-05-29T11:51:43', 'records': '100', 'pass': 'true',
+            'message': 'the big brown'
         },
         {
             # invalid start date
             'batch': 'oIcACSLYuEWKXVHNeXdK', 'start': '2003-19-12T03:32:48',
-            'end': '2019-05-29T11:51:43', 'records': '100', 'pass': 'true'
+            'end': '2019-05-29T11:51:43', 'records': '100', 'pass': 'true',
+            'message': 'the big black'
         },
         {
             # invalid records value
             'batch': 'oIcACSLYuEWKXVHNeXdK', 'start': '2003-09-12T03:32:48',
-            'end': '2019-05-29T11:51:43', 'records': '10.6', 'pass': 'false'
+            'end': '2019-05-29T11:51:43', 'records': '10.6', 'pass': 'false',
+            'message': 'the big blue'
         }
     ])
     def test_fails_for__invalid_column_values(self, data):
@@ -251,11 +275,11 @@ class TestRowValidator:
         pytest.raises(ValidationError, self.validator, row)
         assert self.validator.is_valid(row) == False
 
-
     def test_passes_for_valid_row_data(self):
-        row = AttrDict(        {
+        row = AttrDict({
             'batch': 'oIcACSLYuEWKXVHNeXdK', 'start': '2003-09-12T03:32:48',
-            'end': '2019-05-29T11:51:43', 'records': '100', 'pass': 'true'
+            'end': '2019-05-29T11:51:43', 'records': '100', 'pass': 'true',
+            'message': 'the big brown fox'
         })
 
         try:

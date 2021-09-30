@@ -11,8 +11,6 @@ from typing import Any, Callable
 from urllib.parse import unquote
 
 import boto3
-import botocore
-import requests
 
 
 logger = logging.getLogger(__file__)
@@ -178,18 +176,27 @@ class FuncValidator:
             raise ValidationError(f"Invalid {self.label or 'value'} provided: {value}. Error: {ex}")
 
 
+def _notempty(value: str):
+    if value in (None, '') or len(value.strip()) == 0:
+        raise ValueError('Value cannot be empty or whitespaces only')
+
+
+NotEmptyValidator = FuncValidator(_notempty)
+
 class RowValidator:
     """Defines rules for validating csv records to ensure column data are of expected type/format.
     """
 
     err: ValidationError = None
     datetime_validator = DateValidator('%Y-%m-%dT%H:%M:%S')
+
     columns = AttrDict({
         'batch': BatchValidator(),
         'start': datetime_validator,
         'end': datetime_validator,
         'records': FuncValidator(int),
         'pass': BoolValidator(),
+        'message': NotEmptyValidator,
     })
 
     def __call__(self, row: AttrDict):
